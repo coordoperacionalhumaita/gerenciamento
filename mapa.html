@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Painel Operacional - Humaitá</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<style>
+  body { margin:0; font-family: Arial; }
+
+  #map {
+    height: 100vh;
+  }
+
+  .painel {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: white;
+    padding: 12px;
+    border-radius: 10px;
+    z-index: 1000;
+    font-size: 14px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  }
+
+  .status {
+    margin-top: 8px;
+    font-size: 12px;
+  }
+
+</style>
+</head>
+
+<body>
+
+<div class="painel">
+  <b>Painel Operacional</b><br><br>
+
+  <input type="checkbox" checked onchange="toggleTipo('Tráfico')"> Tráfico<br>
+  <input type="checkbox" checked onchange="toggleTipo('Barricada')"> Barricada<br>
+  <input type="checkbox" checked onchange="toggleTipo('Bloqueio')"> Bloqueio<br>
+  <input type="checkbox" checked onchange="toggleTipo('Local vistoriado')"> Vistoriado<br>
+  <input type="checkbox" checked onchange="toggleTipo('MDOIP')"> MDOIP<br>
+
+  <div class="status" id="status">Atualizando...</div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+
+// 🔐 COLOQUE SUA URL AQUI
+const API_URL = "https://script.google.com/macros/s/AKfycbw6NpIHGf7hv7QKdcpFJf2-iaY2EJEKNFPYUwySuFUyt9diKFi1KwPQjeYVsrE9vxrU/exec?token=HUMAITA123";
+
+const map = L.map('map').setView([-23.55, -46.63], 12);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: 'OSM'
+}).addTo(map);
+
+let markers = [];
+let tiposVisiveis = {
+  "Tráfico": true,
+  "Barricada": true,
+  "Bloqueio": true,
+  "Local vistoriado": true,
+  "MDOIP": true
+};
+
+// 🎨 Cor por tipo
+function cor(tipo) {
+  switch(tipo) {
+    case "Tráfico": return "red";
+    case "Barricada": return "orange";
+    case "Bloqueio": return "yellow";
+    case "Local vistoriado": return "green";
+    case "MDOIP": return "black";
+    default: return "gray";
+  }
+}
+
+// 🔄 Carregar dados do doGet
+function carregarDados() {
+
+  document.getElementById("status").innerText = "Atualizando...";
+
+  fetch(API_URL)
+  .then(r => r.json())
+  .then(dados => {
+
+    // limpa mapa
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+
+    let bounds = [];
+
+    dados.forEach(item => {
+
+      const lat = parseFloat(item.lat);
+      const lon = parseFloat(item.lon);
+
+      if (!lat || !lon) return;
+
+      if (!tiposVisiveis[item.tipo]) return;
+
+      const marker = L.circleMarker([lat, lon], {
+        color: cor(item.tipo),
+        radius: 8,
+        fillOpacity: 0.8
+      }).addTo(map);
+
+      marker.tipo = item.tipo;
+
+      marker.bindPopup(`
+        <b>${item.tipo}</b><br>
+        Origem: ${item.origem}<br>
+        Data: ${item.data} ${item.hora}<br>
+        Obs: ${item.obs || "-"}
+      `);
+
+      markers.push(marker);
+      bounds.push([lat, lon]);
+
+    });
+
+    // Ajusta zoom automaticamente
+    if (bounds.length > 0) {
+      map.fitBounds(bounds, { padding: [30, 30] });
+    }
+
+    document.getElementById("status").innerText = `Atualizado: ${dados.length} registros`;
+
+  })
+  .catch(err => {
+    console.error(err);
+    document.getElementById("status").innerText = "Erro ao atualizar";
+  });
+}
+
+// 🎯 Filtro
+function toggleTipo(tipo) {
+  tiposVisiveis[tipo] = !tiposVisiveis[tipo];
+  carregarDados();
+}
+
+// 🚀 Inicialização
+carregarDados();
+
+// 🔄 Atualiza a cada 10s
+setInterval(carregarDados, 10000);
+
+</script>
+
+</body>
+</html>
