@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>SGI CS - Registro Rápido</title>
+
+<style>
+  body {
+    font-family: Arial;
+    background: #111;
+    color: white;
+    padding: 15px;
+  }
+
+  h2 {
+    text-align: center;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .btn {
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .barricada { background: #ff9800; }
+  .bloqueio { background: #ffc107; color: black; }
+  .trafico { background: #f44336; }
+  .vistoriado { background: #4caf50; }
+  .mdoip { background: #333; }
+
+  .status {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 14px;
+  }
+
+</style>
+</head>
+
+<body>
+
+<h2>📍 Registro Operacional</h2>
+
+<select id="origem">
+  <option value="">Origem</option>
+  <option value="AA">AA</option>
+  <option value="1ª Cia">1ª Cia</option>
+  <option value="2ª Cia">2ª Cia</option>
+  <option value="3ª Cia">3ª Cia</option>
+  <option value="EM">EM</option>
+</select>
+
+<div class="grid">
+  <div class="btn barricada" onclick="registrar('Barricada')">🚧 Barricada</div>
+  <div class="btn bloqueio" onclick="registrar('Bloqueio')">⛔ Bloqueio</div>
+  <div class="btn trafico" onclick="registrar('Tráfico')">💀 Tráfico</div>
+  <div class="btn vistoriado" onclick="registrar('Local vistoriado')">🏠 Vistoriado</div>
+  <div class="btn mdoip" onclick="registrar('MDOIP')">👤 MDOIP</div>
+</div>
+
+<div class="status" id="status">
+  Pronto para registrar
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbw6NpIHGf7hv7QKdcpFJf2-iaY2EJEKNFPYUwySuFUyt9diKFi1KwPQjeYVsrE9vxrU/exec";
+
+function registrar(tipo) {
+
+  const origem = document.getElementById("origem").value;
+
+  if (!origem) {
+    alert("Selecione a origem");
+    return;
+  }
+
+  document.getElementById("status").innerText = "Capturando GPS...";
+
+  navigator.geolocation.getCurrentPosition(pos => {
+
+    const agora = new Date();
+
+    const payload = {
+      data: agora.toLocaleDateString(),
+      hora: agora.toLocaleTimeString(),
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      tipo: tipo,
+      origem: origem,
+      obs: ""
+    };
+
+    document.getElementById("status").innerText = "Enviando...";
+
+    fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(() => {
+      document.getElementById("status").innerText = `✅ ${tipo} registrado`;
+      vibrar();
+    })
+    .catch(() => {
+      document.getElementById("status").innerText = "❌ Erro ao enviar";
+    });
+
+  }, () => {
+    document.getElementById("status").innerText = "Erro no GPS";
+  });
+}
+
+function vibrar() {
+  if (navigator.vibrate) {
+    navigator.vibrate(200);
+  }
+}
+</script>
+
+</body>
+</html>
