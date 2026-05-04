@@ -90,11 +90,20 @@ function carregarDados() {
 
   document.getElementById("status").innerText = "Atualizando...";
 
-  fetch(API_URL)
-  .then(r => r.json())
-  .then(dados => {
+  const script = document.createElement("script");
 
-    // limpa mapa
+  const callbackName = "callbackMapa";
+
+  // Remove script anterior (evita bug)
+  const antigo = document.getElementById("jsonpScript");
+  if (antigo) antigo.remove();
+
+  script.id = "jsonpScript";
+
+  script.src = `${API_URL}&callback=${callbackName}`;
+
+  window[callbackName] = function(dados) {
+
     markers.forEach(m => map.removeLayer(m));
     markers = [];
 
@@ -106,7 +115,6 @@ function carregarDados() {
       const lon = parseFloat(item.lon);
 
       if (!lat || !lon) return;
-
       if (!tiposVisiveis[item.tipo]) return;
 
       const marker = L.circleMarker([lat, lon], {
@@ -114,8 +122,6 @@ function carregarDados() {
         radius: 8,
         fillOpacity: 0.8
       }).addTo(map);
-
-      marker.tipo = item.tipo;
 
       marker.bindPopup(`
         <b>${item.tipo}</b><br>
@@ -129,18 +135,15 @@ function carregarDados() {
 
     });
 
-    // Ajusta zoom automaticamente
     if (bounds.length > 0) {
       map.fitBounds(bounds, { padding: [30, 30] });
     }
 
     document.getElementById("status").innerText = `Atualizado: ${dados.length} registros`;
 
-  })
-  .catch(err => {
-    console.error(err);
-    document.getElementById("status").innerText = "Erro ao atualizar";
-  });
+  };
+
+  document.body.appendChild(script);
 }
 
 // 🎯 Filtro
